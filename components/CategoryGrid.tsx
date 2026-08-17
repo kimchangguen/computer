@@ -1,0 +1,2 @@
+import Link from "next/link";import {categories} from "@/data/posts";
+export function CategoryGrid(){return <div className="category-grid">{Object.entries(categories).map(([slug,c],i)=><Link href={`/${slug}`} className="category-card" key={slug}><span className="category-index">0{i+1}</span><i className="category-icon">{c.icon}</i><h3>{c.name}</h3><p>{c.description}</p><b>분야별 글 보기 <span>→</span></b></Link>)}</div>}
