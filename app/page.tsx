@@ -3,9 +3,12 @@ import { SiteFrame } from "@/components/SiteFrame";
 import {CategoryGrid} from "@/components/CategoryGrid";
 import {PostGrid} from "@/components/PostCard";
 import {ServiceCTA} from "@/components/ServiceCTA";
-import {posts} from "@/data/posts";
+import {getLatestPosts} from "@/lib/wordpress";
 
-export default function Home() {
+export const revalidate = 120;
+
+export default async function Home() {
+  const posts = await getLatestPosts(8).catch(() => []);
   return <SiteFrame><main><section className="hero"><div className="hero-grid shell">
     <div className="hero-copy"><span className="eyebrow"><i />컴퓨터 수리 전문가가 직접 전하는 정보</span><h1>컴퓨터 문제가 생겼을 때,<br /><strong>가장 먼저 확인할 정보</strong></h1><p>컴퓨터 · 노트북 · 데이터복구 · 출장수리<br />컴119의 실제 수리 경험을 바탕으로 정확한 해결 방향을 안내합니다.</p>
       <form className="search" action="/ff"><span aria-hidden="true">⌕</span><input name="q" aria-label="증상 검색" placeholder="증상을 검색해보세요. 예: 컴퓨터 전원이 안 켜져요" /><button>검색</button></form>

@@ -1,6 +1,47 @@
-import type {Metadata} from "next";import {notFound} from "next/navigation";import {SiteFrame} from "@/components/SiteFrame";import {PostGrid} from "@/components/PostCard";import {categories,getPostsByCategory} from "@/data/posts";
-type Props={params:Promise<{category:string}>};
-export function generateStaticParams(){return [...Object.keys(categories),"gg"].map(category=>({category}))}
-export async function generateMetadata({params}:Props):Promise<Metadata>{const {category}=await params;if(category==="gg")return {title:"회사소개",description:"컴119 소개와 서비스 운영 방향",alternates:{canonical:"/gg"}};const c=categories[category as keyof typeof categories];return c?{title:c.name,description:c.description,alternates:{canonical:`/${category}`}}:{}}
-export default async function CategoryPage({params}:Props){const {category}=await params;if(category==="gg")return <About/>;const c=categories[category as keyof typeof categories];if(!c)notFound();const items=getPostsByCategory(category);return <SiteFrame><main><section className="page-hero"><div className="shell"><span className="breadcrumb">홈 &nbsp;/&nbsp; {c.name}</span><span className="section-kicker">COM119 TECH CONTENT</span><h1>{c.name}</h1><p>{c.description}</p></div></section><section className="section listing"><div className="shell"><div className="listing-head"><h2>최신 포스팅</h2><span>총 {items.length}개의 콘텐츠</span></div><PostGrid posts={items}/><nav className="pagination" aria-label="페이지 이동"><b>1</b><span>2</span><span>3</span><span>다음 →</span></nav></div></section></main></SiteFrame>}
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { SiteFrame } from "@/components/SiteFrame";
+import { PostGrid } from "@/components/PostCard";
+import { categories, type CategorySlug } from "@/data/posts";
+import { getPostsByCategory } from "@/lib/wordpress";
+
+type Props = {
+  params: Promise<{ category: string }>;
+  searchParams: Promise<{ page?: string; q?: string }>;
+};
+
+export const revalidate = 120;
+
+export function generateStaticParams() {
+  return [...Object.keys(categories), "gg"].map((category) => ({ category }));
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { category } = await params;
+  if (category === "gg") return { title: "회사소개", description: "컴119 소개와 서비스 운영 방향", alternates: { canonical: "/gg" } };
+  const current = categories[category as CategorySlug];
+  return current ? { title: current.name, description: current.description, alternates: { canonical: `/${category}` } } : {};
+}
+
+export default async function CategoryPage({ params, searchParams }: Props) {
+  const { category } = await params;
+  if (category === "gg") return <About />;
+  const current = categories[category as CategorySlug];
+  if (!current) notFound();
+
+  const query = await searchParams;
+  const page = Math.max(1, Number.parseInt(query.page ?? "1", 10) || 1);
+  const result = await getPostsByCategory(category as CategorySlug, page, 8, query.q).catch(() => ({ posts: [], total: 0, totalPages: 0 }));
+
+  return <SiteFrame><main><section className="page-hero"><div className="shell"><span className="breadcrumb">홈 &nbsp;/&nbsp; {current.name}</span><span className="section-kicker">COM119 TECH CONTENT</span><h1>{current.name}</h1><p>{current.description}</p></div></section><section className="section listing"><div className="shell"><div className="listing-head"><h2>최신 포스팅</h2><span>총 {result.total}개의 콘텐츠</span></div><PostGrid posts={result.posts}/><Pagination category={category} page={page} totalPages={result.totalPages} query={query.q}/></div></section></main></SiteFrame>;
+}
+
+function Pagination({ category, page, totalPages, query }: { category: string; page: number; totalPages: number; query?: string }) {
+  if (totalPages < 1) return null;
+  const pages = Array.from({ length: totalPages }, (_, index) => index + 1).slice(Math.max(0, page - 3), page + 2);
+  const href = (target: number) => `/${category}?page=${target}${query ? `&q=${encodeURIComponent(query)}` : ""}`;
+  return <nav className="pagination" aria-label="페이지 이동">{pages.map((target) => target === page ? <b key={target}>{target}</b> : <Link key={target} href={href(target)}>{target}</Link>)}{page < totalPages && <Link href={href(page + 1)}>다음 →</Link>}</nav>;
+}
+
 function About(){return <SiteFrame><main><section className="page-hero about-hero"><div className="shell"><span className="section-kicker">ABOUT COM119</span><h1>문제를 이해하는 것부터<br/>수리는 시작됩니다.</h1><p>컴119는 컴퓨터 문제 해결 경험을 바탕으로 정확하고 실용적인 정보를 전합니다.</p></div></section><section className="section"><div className="shell about-grid"><div><span className="section-kicker">WHO WE ARE</span><h2>컴119 소개</h2></div><div><p className="lead">컴119는 컴퓨터와 노트북 수리, 데이터복구, 출장 점검 서비스를 제공하는 컴퓨터 수리 전문업체입니다.</p><p>이 사이트는 사용자가 증상을 이해하고 올바른 해결 방향을 찾을 수 있도록 실제 현장에서 쌓은 경험을 정보로 정리하는 전문 콘텐츠 채널입니다.</p></div></div><div className="shell value-grid">{[["01","주요 서비스","컴퓨터·노트북 점검, 데이터복구, 네트워크와 출장 서비스"],["02","운영 방향","과장보다 정확한 정보, 광고보다 문제 해결에 집중합니다."],["03","상담 안내","자가진단이 어렵거나 데이터가 중요할 때 점검 방향을 안내합니다."]].map(([n,t,d])=><article key={n}><span>{n}</span><h3>{t}</h3><p>{d}</p></article>)}</div></section></main></SiteFrame>}
