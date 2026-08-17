@@ -8,7 +8,7 @@
 - React 19
 - TypeScript
 - Tailwind CSS
-- Mock data 기반 콘텐츠 구조
+- WordPress REST API 기반 콘텐츠 구조
 
 ## 실행
 
