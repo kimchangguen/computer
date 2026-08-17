@@ -1,6 +1,10 @@
+import { cache } from "react";
 import { categoryMap, type CategorySlug, type Post } from "@/data/posts";
 
 export const WORDPRESS_REVALIDATE_SECONDS = 120;
+// Categories change far less often than posts, so they can be cached longer
+// to avoid re-hitting WordPress on every related-posts lookup.
+const CATEGORY_REVALIDATE_SECONDS = 1800;
 
 type Rendered = { rendered: string };
 type WPTerm = { id: number; name: string; slug: string; taxonomy: "category" | "post_tag" };
@@ -39,7 +43,11 @@ function getWordPressUrl() {
   return value.replace(/\/$/, "");
 }
 
-async function request<T>(path: string, params: Record<string, string | number | undefined> = {}) {
+async function request<T>(
+  path: string,
+  params: Record<string, string | number | undefined> = {},
+  revalidateSeconds: number = WORDPRESS_REVALIDATE_SECONDS,
+) {
   const url = new URL(`/wp-json/wp/v2/${path}`, getWordPressUrl());
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== "") url.searchParams.set(key, String(value));
@@ -47,7 +55,7 @@ async function request<T>(path: string, params: Record<string, string | number |
   const response = await fetch(url, {
     headers: { Accept: "application/json" },
     signal: AbortSignal.timeout(10_000),
-    next: { revalidate: WORDPRESS_REVALIDATE_SECONDS, tags: ["wordpress"] },
+    next: { revalidate: revalidateSeconds, tags: ["wordpress"] },
   });
   if (!response.ok) throw new Error(`WordPress request failed: ${response.status}`);
   return { data: (await response.json()) as T, headers: response.headers };
@@ -102,15 +110,23 @@ function toPost(post: WPPost): Post {
 }
 
 export async function getCategories() {
-  const { data } = await request<WPCategory[]>("categories", { per_page: 100, hide_empty: "false" });
+  const { data } = await request<WPCategory[]>(
+    "categories",
+    { per_page: 100, hide_empty: "false" },
+    CATEGORY_REVALIDATE_SECONDS,
+  );
   return data;
 }
 
-async function getCategoryId(siteCategory: CategorySlug) {
+const getCategoryId = cache(async (siteCategory: CategorySlug) => {
   const wpSlug = categoryMap[siteCategory];
-  const { data } = await request<WPCategory[]>("categories", { slug: wpSlug, per_page: 1 });
+  const { data } = await request<WPCategory[]>(
+    "categories",
+    { slug: wpSlug, per_page: 1 },
+    CATEGORY_REVALIDATE_SECONDS,
+  );
   return data[0]?.id ?? null;
-}
+});
 
 export async function getPosts(options: {
   page?: number;
@@ -147,7 +163,10 @@ export async function getPostsByCategory(category: CategorySlug, page = 1, perPa
   return getPosts({ category, page, perPage, search });
 }
 
-export async function getPostBySlug(slug: string) {
+// Wrapped in React's cache() for request memoization: generateMetadata() and
+// the page component both need the same post, and this ensures WordPress is
+// only queried once per incoming request instead of twice.
+export const getPostBySlug = cache(async (slug: string) => {
   const { data } = await request<WPPost[]>("posts", {
     slug,
     status: "publish",
@@ -155,7 +174,7 @@ export async function getPostBySlug(slug: string) {
     per_page: 1,
   });
   return data[0] ? toPost(data[0]) : null;
-}
+});
 
 export async function getRelatedPosts(post: Post, limit = 3) {
   const sameCategory = await getPosts({ category: post.category, perPage: limit, exclude: post.id });
