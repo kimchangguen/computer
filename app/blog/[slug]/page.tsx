@@ -19,9 +19,22 @@ export const revalidate = 120;
 // pattern) since it has no way to know which slugs exist ahead of time.
 // dynamicParams stays true (default), so a brand new post not yet in this
 // list still renders on its first visit and gets cached from then on.
+//
+// WordPress returns non-Latin slugs already percent-encoded (e.g. Korean
+// titles come back as "%ec%83%88-..."). generateStaticParams expects the
+// decoded segment value and encodes it itself when building the route, so
+// passing the already-encoded slug through as-is double-encodes it — Next
+// then bakes a static page for the wrong path, and every real visit (which
+// requests the correctly single-encoded URL) falls through to a 404.
 export async function generateStaticParams() {
   const { posts } = await getPosts({ perPage: 100 }).catch(() => ({ posts: [] }));
-  return posts.map((post) => ({ slug: post.slug }));
+  return posts.map((post) => {
+    try {
+      return { slug: decodeURIComponent(post.slug) };
+    } catch {
+      return { slug: post.slug };
+    }
+  });
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -38,7 +51,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function BlogPost({ params }: Props) {
-  const post = await getPostBySlug((await params).slug).catch(() => null);
+  // Not caught here on purpose: getPostBySlug() only returns null when
+  // WordPress genuinely has no matching post (200 + empty array). A real
+  // API failure (network error, timeout, 5xx) throws instead and should
+  // surface as an error page, not silently masquerade as notFound().
+  const post = await getPostBySlug((await params).slug);
   if (!post) notFound();
   const category = categories[post.category];
   // Awaited inline (not streamed): a Suspense boundary here would opt the
