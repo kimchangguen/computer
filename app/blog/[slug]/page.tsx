@@ -5,17 +5,11 @@ import { SiteFrame } from "@/components/SiteFrame";
 import { PostGrid } from "@/components/PostCard";
 import { ServiceCTA } from "@/components/ServiceCTA";
 import { categories } from "@/data/posts";
-import { getLatestPosts, getPostBySlug, getRelatedPosts } from "@/lib/wordpress";
+import { getPostBySlug, getRelatedPosts } from "@/lib/wordpress";
 
 type Props = { params: Promise<{ slug: string }> };
 
-export const revalidate = 120;
-export const dynamicParams = true;
-
-export async function generateStaticParams() {
-  const posts = await getLatestPosts(100).catch(() => []);
-  return posts.map((post) => ({ slug: post.slug }));
-}
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const post = await getPostBySlug((await params).slug).catch(() => null);

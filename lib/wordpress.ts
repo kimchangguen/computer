@@ -11,13 +11,13 @@ type WPPost = {
   id: number;
   slug: string;
   status: string;
-  date: string;
-  modified: string;
-  title: Rendered;
-  excerpt: Rendered;
-  content: Rendered;
-  categories: number[];
-  tags: number[];
+  date?: string;
+  modified?: string;
+  title?: Rendered;
+  excerpt?: Rendered;
+  content?: Rendered;
+  categories?: number[];
+  tags?: number[];
   _embedded?: {
     "wp:featuredmedia"?: WPMedia[];
     "wp:term"?: WPTerm[][];
@@ -72,8 +72,8 @@ function plainText(html: string) {
   return decodeEntities(html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim());
 }
 
-function safeSlug(slug: string) {
-  try { return decodeURIComponent(slug); } catch { return slug; }
+function normalizeTitle(value: string) {
+  return plainText(value).replace(/^#{1,6}\s*/, "").trim();
 }
 
 function embeddedTerms(post: WPPost) {
@@ -87,15 +87,15 @@ function toPost(post: WPPost): Post {
   const media = post._embedded?.["wp:featuredmedia"]?.[0];
   return {
     id: post.id,
-    slug: safeSlug(post.slug),
-    title: plainText(post.title.rendered),
-    excerpt: plainText(post.excerpt.rendered),
-    content: post.content.rendered,
+    slug: post.slug,
+    title: normalizeTitle(post.title?.rendered ?? ""),
+    excerpt: plainText(post.excerpt?.rendered ?? ""),
+    content: post.content?.rendered ?? "",
     category,
     featuredImage: media?.source_url ?? null,
     featuredImageAlt: plainText(media?.alt_text ?? ""),
-    publishedAt: post.date.slice(0, 10),
-    modifiedAt: post.modified.slice(0, 10),
+    publishedAt: post.date?.slice(0, 10) ?? "",
+    modifiedAt: post.modified?.slice(0, 10) ?? "",
     tags: terms.filter((term) => term.taxonomy === "post_tag").map((term) => plainText(term.name)),
     author: plainText(post._embedded?.author?.[0]?.name ?? "컴119"),
   };
