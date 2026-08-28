@@ -159,6 +159,21 @@ export async function getLatestPosts(limit = 8) {
   return (await getPosts({ perPage: limit })).posts;
 }
 
+// Capped at 20 pages (2,000 posts) so a runaway post count can't turn
+// sitemap generation into an unbounded number of WordPress requests.
+const MAX_SITEMAP_PAGES = 20;
+
+export async function getAllPosts(): Promise<Post[]> {
+  const perPage = 100;
+  const first = await getPosts({ perPage, page: 1 });
+  const totalPages = Math.min(first.totalPages, MAX_SITEMAP_PAGES);
+  if (totalPages <= 1) return first.posts;
+  const rest = await Promise.all(
+    Array.from({ length: totalPages - 1 }, (_, index) => getPosts({ perPage, page: index + 2 })),
+  );
+  return [...first.posts, ...rest.flatMap((page) => page.posts)];
+}
+
 export async function getPostsByCategory(category: CategorySlug, page = 1, perPage = 8, search?: string) {
   return getPosts({ category, page, perPage, search });
 }

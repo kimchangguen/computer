@@ -4,8 +4,9 @@ import { notFound } from "next/navigation";
 import { SiteFrame } from "@/components/SiteFrame";
 import { PostGrid } from "@/components/PostCard";
 import { ServiceCTA } from "@/components/ServiceCTA";
-import { categories } from "@/data/posts";
+import { categories, type Post } from "@/data/posts";
 import { getPostBySlug, getPosts, getRelatedPosts } from "@/lib/wordpress";
+import { SITE_NAME, SITE_URL, absoluteUrl, jsonLd, truncate } from "@/lib/seo";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -40,13 +41,40 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const post = await getPostBySlug((await params).slug).catch(() => null);
   if (!post) return {};
+  const description = truncate(post.excerpt);
   const images = post.featuredImage ? [post.featuredImage] : [];
+  const url = `/blog/${post.slug}`;
   return {
     title: post.title,
-    description: post.excerpt,
-    alternates: { canonical: `/blog/${post.slug}` },
-    openGraph: { title: post.title, description: post.excerpt, images },
-    twitter: { title: post.title, description: post.excerpt, images },
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "article",
+      url,
+      siteName: SITE_NAME,
+      title: post.title,
+      description,
+      images,
+      publishedTime: post.publishedAt || undefined,
+      modifiedTime: post.modifiedAt || undefined,
+    },
+    twitter: { card: images.length > 0 ? "summary_large_image" : "summary", title: post.title, description, images },
+  };
+}
+
+function blogPostingJsonLd(post: Post) {
+  const url = absoluteUrl(`/blog/${post.slug}`);
+  return {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    description: truncate(post.excerpt),
+    image: post.featuredImage ? [post.featuredImage] : undefined,
+    datePublished: post.publishedAt || undefined,
+    dateModified: post.modifiedAt || post.publishedAt || undefined,
+    author: { "@type": "Organization", name: post.author || SITE_NAME },
+    publisher: { "@type": "Organization", name: SITE_NAME, logo: { "@type": "ImageObject", url: `${SITE_URL}/ppp.png` } },
+    mainEntityOfPage: { "@type": "WebPage", "@id": url },
   };
 }
 
@@ -65,5 +93,5 @@ export default async function BlogPost({ params }: Props) {
   const related = await getRelatedPosts(post, 3).catch(() => []);
   const showFeaturedImage = post.featuredImage && !post.content.includes(post.featuredImage);
 
-  return <SiteFrame><main><article><header className="article-header"><div className="article-shell"><div className="breadcrumb"><Link href="/">홈</Link> &nbsp;/&nbsp; <Link href={`/${post.category}`}>{category.name}</Link></div><span className="category-label">{category.name}</span><h1>{post.title}</h1><p>{post.excerpt}</p><div className="article-meta"><time>{post.publishedAt.replaceAll("-", ".")}</time><span>컴119 기술팀</span><span>읽는 시간 5분</span></div></div></header><div className={`article-cover tone-display${showFeaturedImage ? " has-image" : ""}`}>{showFeaturedImage ? <img src={post.featuredImage!} alt={post.featuredImageAlt || post.title}/> : <span>{category.icon}</span>}<b>COM119 TECH NOTE</b></div><div className="article-content" dangerouslySetInnerHTML={{ __html: post.content }}/>{post.tags.length > 0 && <div className="tag-row">{post.tags.map((tag) => <Link key={tag} href={`/ff?q=${encodeURIComponent(tag)}`}>#{tag}</Link>)}</div>}</article><section className="section related"><div className="shell"><div className="section-head"><div><span className="section-kicker">RELATED CONTENT</span><h2>관련 글</h2></div><div className="other-categories"><span>다른 카테고리</span>{Object.entries(categories).slice(0, 3).map(([slug, item]) => <Link key={slug} href={`/${slug}`}>{item.name}</Link>)}</div></div><PostGrid posts={related}/></div></section><ServiceCTA/></main></SiteFrame>;
+  return <SiteFrame><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(blogPostingJsonLd(post)) }}/><main><article><header className="article-header"><div className="article-shell"><div className="breadcrumb"><Link href="/">홈</Link> &nbsp;/&nbsp; <Link href={`/${post.category}`}>{category.name}</Link></div><span className="category-label">{category.name}</span><h1>{post.title}</h1><p>{post.excerpt}</p><div className="article-meta"><time>{post.publishedAt.replaceAll("-", ".")}</time><span>컴119 기술팀</span><span>읽는 시간 5분</span></div></div></header><div className={`article-cover tone-display${showFeaturedImage ? " has-image" : ""}`}>{showFeaturedImage ? <img src={post.featuredImage!} alt={post.featuredImageAlt || post.title}/> : <span>{category.icon}</span>}<b>COM119 TECH NOTE</b></div><div className="article-content" dangerouslySetInnerHTML={{ __html: post.content }}/>{post.tags.length > 0 && <div className="tag-row">{post.tags.map((tag) => <Link key={tag} href={`/ff?q=${encodeURIComponent(tag)}`}>#{tag}</Link>)}</div>}</article><section className="section related"><div className="shell"><div className="section-head"><div><span className="section-kicker">RELATED CONTENT</span><h2>관련 글</h2></div><div className="other-categories"><span>다른 카테고리</span>{Object.entries(categories).slice(0, 3).map(([slug, item]) => <Link key={slug} href={`/${slug}`}>{item.name}</Link>)}</div></div><PostGrid posts={related}/></div></section><ServiceCTA/></main></SiteFrame>;
 }

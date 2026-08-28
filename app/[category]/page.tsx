@@ -5,6 +5,7 @@ import { SiteFrame } from "@/components/SiteFrame";
 import { PostGrid } from "@/components/PostCard";
 import { categories, type CategorySlug } from "@/data/posts";
 import { getPostsByCategory } from "@/lib/wordpress";
+import { SITE_NAME } from "@/lib/seo";
 
 type Props = {
   params: Promise<{ category: string }>;
@@ -19,9 +20,26 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { category } = await params;
-  if (category === "gg") return { title: "회사소개", description: "컴119 소개와 서비스 운영 방향", alternates: { canonical: "/gg" } };
+  if (category === "gg") {
+    const title = "회사소개";
+    const description = "컴119 소개와 서비스 운영 방향";
+    return {
+      title,
+      description,
+      alternates: { canonical: "/gg" },
+      openGraph: { type: "website", url: "/gg", siteName: SITE_NAME, title, description },
+      twitter: { card: "summary", title, description },
+    };
+  }
   const current = categories[category as CategorySlug];
-  return current ? { title: current.name, description: current.description, alternates: { canonical: `/${category}` } } : {};
+  if (!current) return {};
+  return {
+    title: current.name,
+    description: current.description,
+    alternates: { canonical: `/${category}` },
+    openGraph: { type: "website", url: `/${category}`, siteName: SITE_NAME, title: current.name, description: current.description },
+    twitter: { card: "summary", title: current.name, description: current.description },
+  };
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
