@@ -43,6 +43,20 @@ function getWordPressUrl() {
   return value.replace(/\/$/, "");
 }
 
+const REQUEST_TIMEOUT_MS = 10_000;
+// getPostBySlug() intentionally lets a real WordPress failure throw instead
+// of masquerading as notFound() (see BlogPost below), so a single transient
+// blip on the WordPress origin — a momentary 502/503, a dropped connection —
+// used to surface straight to the visitor (and to Googlebot) as a full-page
+// 500. One retry absorbs that without hiding a genuinely dead origin: it
+// still throws, just after two tries instead of one.
+const MAX_ATTEMPTS = 2;
+const RETRY_DELAY_MS = 300;
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function request<T>(
   path: string,
   params: Record<string, string | number | undefined> = {},
@@ -52,13 +66,23 @@ async function request<T>(
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== "") url.searchParams.set(key, String(value));
   });
-  const response = await fetch(url, {
-    headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(10_000),
-    next: { revalidate: revalidateSeconds, tags: ["wordpress"] },
-  });
-  if (!response.ok) throw new Error(`WordPress request failed: ${response.status}`);
-  return { data: (await response.json()) as T, headers: response.headers };
+
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const response = await fetch(url, {
+        headers: { Accept: "application/json" },
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        next: { revalidate: revalidateSeconds, tags: ["wordpress"] },
+      });
+      if (!response.ok) throw new Error(`WordPress request failed: ${response.status}`);
+      return { data: (await response.json()) as T, headers: response.headers };
+    } catch (error) {
+      lastError = error;
+      if (attempt < MAX_ATTEMPTS) await delay(RETRY_DELAY_MS);
+    }
+  }
+  throw lastError;
 }
 
 function decodeEntities(value: string) {
