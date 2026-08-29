@@ -10,6 +10,10 @@ export type Post = {
   featuredImage: string | null;
   featuredImageAlt: string;
   publishedAt: string;
+  // Full-precision publish timestamp (unlike publishedAt, which is
+  // date-truncated for display). Used for prev/next adjacency so two posts
+  // published on the same calendar day still order correctly.
+  publishedAtISO: string;
   modifiedAt: string;
   tags: string[];
   author: string;

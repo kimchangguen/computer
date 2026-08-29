@@ -127,6 +127,7 @@ function toPost(post: WPPost): Post {
     featuredImage: media?.source_url ?? null,
     featuredImageAlt: plainText(media?.alt_text ?? ""),
     publishedAt: post.date?.slice(0, 10) ?? "",
+    publishedAtISO: post.date ?? "",
     modifiedAt: post.modified?.slice(0, 10) ?? "",
     tags: terms.filter((term) => term.taxonomy === "post_tag").map((term) => plainText(term.name)),
     author: plainText(post._embedded?.author?.[0]?.name ?? "컴119"),
@@ -158,6 +159,9 @@ export async function getPosts(options: {
   category?: CategorySlug;
   search?: string;
   exclude?: number;
+  before?: string;
+  after?: string;
+  order?: "asc" | "desc";
 } = {}): Promise<PaginatedPosts> {
   const categoryId = options.category ? await getCategoryId(options.category) : undefined;
   if (options.category && !categoryId) return { posts: [], total: 0, totalPages: 0 };
@@ -165,12 +169,14 @@ export async function getPosts(options: {
     status: "publish",
     _embed: 1,
     orderby: "date",
-    order: "desc",
+    order: options.order ?? "desc",
     page: options.page ?? 1,
     per_page: options.perPage ?? 8,
     categories: categoryId ?? undefined,
     search: options.search,
     exclude: options.exclude,
+    before: options.before,
+    after: options.after,
   });
   return {
     posts: data.map(toPost),
@@ -221,4 +227,18 @@ export async function getRelatedPosts(post: Post, limit = 3) {
   const latest = await getPosts({ perPage: limit + 1, exclude: post.id });
   const combined = [...sameCategory.posts, ...latest.posts.filter((item) => !sameCategory.posts.some((same) => same.id === item.id))];
   return combined.slice(0, limit);
+}
+
+// Prev/next navigation for /blog/[slug]. Both queries run in parallel, using
+// the full publishedAtISO timestamp (not the date-truncated publishedAt) so
+// two posts published the same calendar day still order correctly.
+export async function getAdjacentPosts(post: Post) {
+  const [olderResult, newerResult] = await Promise.all([
+    getPosts({ perPage: 1, before: post.publishedAtISO, exclude: post.id }),
+    getPosts({ perPage: 1, after: post.publishedAtISO, order: "asc", exclude: post.id }),
+  ]);
+  return {
+    older: olderResult.posts[0] ?? null,
+    newer: newerResult.posts[0] ?? null,
+  };
 }
