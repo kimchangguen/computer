@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SiteFrame } from "@/components/SiteFrame";
 import { PostGrid } from "@/components/PostCard";
+import { CategoryCTA } from "@/components/CategoryCTA";
 import { categories, type CategorySlug } from "@/data/posts";
 import { getPostsByCategory } from "@/lib/wordpress";
 import { SITE_NAME } from "@/lib/seo";
@@ -50,9 +51,13 @@ export default async function CategoryPage({ params, searchParams }: Props) {
 
   const query = await searchParams;
   const page = Math.max(1, Number.parseInt(query.page ?? "1", 10) || 1);
-  const result = await getPostsByCategory(category as CategorySlug, page, 8, query.q).catch(() => ({ posts: [], total: 0, totalPages: 0 }));
+  // perPage=10 on the first page yields 1 featured post + 9 grid posts (3
+  // clean rows of 3), matching the reference layout's featured+grid split.
+  const result = await getPostsByCategory(category as CategorySlug, page, 10, query.q).catch(() => ({ posts: [], total: 0, totalPages: 0 }));
+  const featured = page === 1 ? result.posts[0] : undefined;
+  const gridPosts = featured ? result.posts.slice(1) : result.posts;
 
-  return <SiteFrame><main><section className="page-hero"><div className="shell"><span className="breadcrumb">홈 &nbsp;/&nbsp; {current.name}</span><span className="section-kicker">COM119 TECH CONTENT</span><h1>{current.name}</h1><p>{current.description}</p></div></section><section className="section listing"><div className="shell"><div className="listing-head"><h2>최신 포스팅</h2><span>총 {result.total}개의 콘텐츠</span></div><PostGrid posts={result.posts}/><Pagination category={category} page={page} totalPages={result.totalPages} query={query.q}/></div></section></main></SiteFrame>;
+  return <SiteFrame><main><section className="category-hero"><div className="shell"><span className="breadcrumb">홈 &nbsp;/&nbsp; {current.name}</span><span className="section-kicker light">COM119 TECH CONTENT</span><h1>{current.name}</h1><p>{current.description}</p></div></section>{featured && <section className="featured-post"><div className="shell featured-grid"><Link href={`/blog/${featured.slug}`} className="featured-image tone-display">{featured.featuredImage ? <img src={featured.featuredImage} alt={featured.featuredImageAlt || featured.title}/> : <span>{current.icon}</span>}</Link><div className="featured-body"><span className="category-label">{current.name}</span><h2><Link href={`/blog/${featured.slug}`}>{featured.title}</Link></h2><p>{featured.excerpt}</p><time>{featured.publishedAt.replaceAll("-", ".")}</time></div></div></section>}{(gridPosts.length > 0 || result.total === 0) && <section className="section listing"><div className="shell"><div className="listing-head"><h2>최신 포스팅</h2><span>총 {result.total}개의 콘텐츠</span></div><PostGrid posts={gridPosts}/><Pagination category={category} page={page} totalPages={result.totalPages} query={query.q}/></div></section>}<CategoryCTA/></main></SiteFrame>;
 }
 
 function Pagination({ category, page, totalPages, query }: { category: string; page: number; totalPages: number; query?: string }) {
