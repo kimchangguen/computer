@@ -7,7 +7,7 @@ import { CategoryCTA } from "@/components/CategoryCTA";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { categories, type Post } from "@/data/posts";
 import { getAdjacentPosts, getPostBySlug, getPosts, getRelatedPosts } from "@/lib/wordpress";
-import { SITE_NAME, SITE_URL, absoluteUrl, jsonLd, truncate } from "@/lib/seo";
+import { SITE_IMAGE, SITE_NAME, absoluteUrl, breadcrumbJsonLd, jsonLd, truncate } from "@/lib/seo";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -110,7 +110,7 @@ function blogPostingJsonLd(post: Post) {
     datePublished: post.publishedAt || undefined,
     dateModified: post.modifiedAt || post.publishedAt || undefined,
     author: { "@type": "Organization", name: post.author || SITE_NAME },
-    publisher: { "@type": "Organization", name: SITE_NAME, logo: { "@type": "ImageObject", url: `${SITE_URL}/ppp.png` } },
+    publisher: { "@type": "Organization", name: SITE_NAME, logo: { "@type": "ImageObject", url: absoluteUrl(SITE_IMAGE) } },
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
   };
 }
@@ -134,6 +134,14 @@ export default async function BlogPost({ params }: Props) {
   const readingMinutes = estimateReadingMinutes(post.content);
   const toc = buildToc(post.content);
   const pageUrl = absoluteUrl(`/blog/${post.slug}`);
+  const pageJsonLd = [
+    blogPostingJsonLd(post),
+    breadcrumbJsonLd([
+      { name: "홈", url: "/" },
+      { name: category.name, url: `/${post.category}` },
+      { name: post.title, url: `/blog/${post.slug}` },
+    ]),
+  ];
 
-  return <SiteFrame><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(blogPostingJsonLd(post)) }}/><main><article><header className="article-header"><div className="article-shell"><div className="breadcrumb"><Link href="/">홈</Link> &nbsp;/&nbsp; <Link href={`/${post.category}`}>{category.name}</Link></div><span className="category-label">{category.name}</span><h1>{post.title}</h1><p>{post.excerpt}</p><div className="article-meta"><time>{post.publishedAt.replaceAll("-", ".")}</time><span>{post.author}</span><span>읽는 시간 {readingMinutes}분</span><CopyLinkButton url={pageUrl}/></div></div></header><div className={`article-cover tone-display${showFeaturedImage ? " has-image" : ""}`}>{showFeaturedImage ? <img src={post.featuredImage!} alt={post.featuredImageAlt || post.title} loading="eager" fetchPriority="high"/> : <span>{category.icon}</span>}<b>COM119 TECH NOTE</b></div>{post.excerpt && <div className="summary-box"><b>핵심 요약</b><p>{post.excerpt}</p></div>}{toc.items.length > 0 && <nav className="article-toc" aria-label="목차"><b>목차</b><ol>{toc.items.map((item) => <li key={item.id} className={item.level === 3 ? "toc-h3" : undefined}><a href={`#${item.id}`}>{item.text}</a></li>)}</ol></nav>}<div className="article-content" dangerouslySetInnerHTML={{ __html: toc.html }}/>{post.tags.length > 0 && <div className="tag-row">{post.tags.map((tag) => <Link key={tag} href={`/ff?q=${encodeURIComponent(tag)}`}>#{tag}</Link>)}</div>}<div className="author-box"><span className="author-avatar">{post.author.slice(0, 1)}</span><div><b>{post.author}</b><p>컴퓨터 수리 현장 경험을 바탕으로 정확하고 실용적인 정보를 전합니다.</p></div></div><nav className="post-nav" aria-label="이전글 다음글">{adjacent.older ? <Link className="post-nav-link prev" href={`/blog/${adjacent.older.slug}`}><span>← 이전 글</span><b>{adjacent.older.title}</b></Link> : <span/>}<Link className="post-nav-list" href={`/${post.category}`}>목록으로</Link>{adjacent.newer ? <Link className="post-nav-link next" href={`/blog/${adjacent.newer.slug}`}><span>다음 글 →</span><b>{adjacent.newer.title}</b></Link> : <span/>}</nav></article><section className="section related"><div className="shell"><div className="section-head"><div><span className="section-kicker">RELATED CONTENT</span><h2>관련 글</h2></div><div className="other-categories"><span>다른 카테고리</span>{Object.entries(categories).slice(0, 3).map(([slug, item]) => <Link key={slug} href={`/${slug}`}>{item.name}</Link>)}</div></div><PostGrid posts={related}/></div></section><CategoryCTA/></main></SiteFrame>;
+  return <SiteFrame><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(pageJsonLd) }}/><main><article><header className="article-header"><div className="article-shell"><div className="breadcrumb"><Link href="/">홈</Link> &nbsp;/&nbsp; <Link href={`/${post.category}`}>{category.name}</Link></div><span className="category-label">{category.name}</span><h1>{post.title}</h1><p>{post.excerpt}</p><div className="article-meta"><time>{post.publishedAt.replaceAll("-", ".")}</time><span>{post.author}</span><span>읽는 시간 {readingMinutes}분</span><CopyLinkButton url={pageUrl}/></div></div></header><div className={`article-cover tone-display${showFeaturedImage ? " has-image" : ""}`}>{showFeaturedImage ? <img src={post.featuredImage!} alt={post.featuredImageAlt || post.title} loading="eager" fetchPriority="high"/> : <span>{category.icon}</span>}<b>COM119 TECH NOTE</b></div>{post.excerpt && <div className="summary-box"><b>핵심 요약</b><p>{post.excerpt}</p></div>}{toc.items.length > 0 && <nav className="article-toc" aria-label="목차"><b>목차</b><ol>{toc.items.map((item) => <li key={item.id} className={item.level === 3 ? "toc-h3" : undefined}><a href={`#${item.id}`}>{item.text}</a></li>)}</ol></nav>}<div className="article-content" dangerouslySetInnerHTML={{ __html: toc.html }}/>{post.tags.length > 0 && <div className="tag-row">{post.tags.map((tag) => <Link key={tag} href={`/ff?q=${encodeURIComponent(tag)}`}>#{tag}</Link>)}</div>}<div className="author-box"><span className="author-avatar">{post.author.slice(0, 1)}</span><div><b>{post.author}</b><p>컴퓨터 수리 현장 경험을 바탕으로 정확하고 실용적인 정보를 전합니다.</p></div></div><nav className="post-nav" aria-label="이전글 다음글">{adjacent.older ? <Link className="post-nav-link prev" href={`/blog/${adjacent.older.slug}`}><span>← 이전 글</span><b>{adjacent.older.title}</b></Link> : <span/>}<Link className="post-nav-list" href={`/${post.category}`}>목록으로</Link>{adjacent.newer ? <Link className="post-nav-link next" href={`/blog/${adjacent.newer.slug}`}><span>다음 글 →</span><b>{adjacent.newer.title}</b></Link> : <span/>}</nav></article><section className="section related"><div className="shell"><div className="section-head"><div><span className="section-kicker">RELATED CONTENT</span><h2>관련 글</h2></div><div className="other-categories"><span>다른 카테고리</span>{Object.entries(categories).slice(0, 3).map(([slug, item]) => <Link key={slug} href={`/${slug}`}>{item.name}</Link>)}</div></div><PostGrid posts={related}/></div></section><CategoryCTA/></main></SiteFrame>;
 }

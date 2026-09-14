@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: { default: DEFAULT_TITLE, template: "%s | 컴119" },
   description: DEFAULT_DESCRIPTION,
-  alternates: { canonical: "/" },
+  alternates: { canonical: "/", types: { "application/rss+xml": "/feed.xml" } },
   icons: { icon: "/ppp.png", shortcut: "/ppp.png", apple: "/ppp.png" },
   openGraph: {
     type: "website",

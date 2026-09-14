@@ -4,7 +4,7 @@ import {CategoryGrid} from "@/components/CategoryGrid";
 import {PostGrid} from "@/components/PostCard";
 import {ServiceCTA} from "@/components/ServiceCTA";
 import {getLatestPosts} from "@/lib/wordpress";
-import { SITE_NAME, SITE_URL, jsonLd } from "@/lib/seo";
+import { SITE_IMAGE, SITE_NAME, SITE_URL, absoluteUrl, jsonLd } from "@/lib/seo";
 
 export const revalidate = 120;
 
@@ -15,13 +15,23 @@ const homeJsonLd = [
     name: SITE_NAME,
     url: SITE_URL,
     inLanguage: "ko-KR",
+    // Matches the real hero search form (action="/ff", input name="q") below
+    // — enables Google's sitelinks search box for this site.
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${SITE_URL}/ff?q={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
   },
   {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: SITE_NAME,
     url: SITE_URL,
-    logo: `${SITE_URL}/ppp.png`,
+    logo: absoluteUrl(SITE_IMAGE),
   },
 ];
 

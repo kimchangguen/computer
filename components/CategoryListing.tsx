@@ -93,7 +93,12 @@ export function ListingBody({
           <Link href={`/blog/${featured.slug}`} className="shell featured-grid">
             <div className="featured-image tone-display">
               {featured.featuredImage ? (
-                <img src={featured.featuredImage} alt={featured.featuredImageAlt || featured.title} />
+                <img
+                  src={featured.featuredImage}
+                  alt={featured.featuredImageAlt || featured.title}
+                  loading="eager"
+                  fetchPriority="high"
+                />
               ) : (
                 <span>{icon}</span>
               )}
