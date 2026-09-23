@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import styles from "./HomeHero.module.css";
@@ -30,7 +29,6 @@ export function HomeHero() {
 
       <div className={styles.content}>
         <div className={styles.brand}>
-          <Image src="/logo.png" alt="컴119" width={181} height={84} className={styles.logo} />
           <span className={styles.eyebrow}><i aria-hidden="true" />컴퓨터 수리 전문가가 직접 전하는 정보</span>
         </div>
         <h1>컴퓨터 문제가 생겼을 때,<br /><strong>가장 먼저 확인할 정보</strong></h1>

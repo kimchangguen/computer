@@ -54,15 +54,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 18px;
   margin-bottom: 24px;
-}
-
-.logo {
-  width: 90.5px;
-  height: 42px;
-  flex: none;
-  object-fit: contain;
 }
 
 .eyebrow {
@@ -298,8 +290,6 @@
 
 @media (max-width: 600px) {
   .hero { min-height: 0; padding: 96px 20px 68px; }
-  .brand { flex-direction: column; gap: 9px; margin-bottom: 24px; }
-  .logo { width: 81.45px; height: 37.8px; }
   .eyebrow { font-size: 11px; gap: 7px; }
   .content h1 { font-size: clamp(25px, 6.65vw, 38px); line-height: 1.36; letter-spacing: -.055em; }
   .description { margin: 20px auto 26px; max-width: 360px; font-size: 13px; line-height: 1.9; }

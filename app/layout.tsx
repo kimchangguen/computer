@@ -10,7 +10,11 @@ export const metadata: Metadata = {
   title: { default: DEFAULT_TITLE, template: "%s | 컴119" },
   description: DEFAULT_DESCRIPTION,
   alternates: { canonical: "/", types: { "application/rss+xml": "/feed.xml" } },
-  icons: { icon: "/ppp.png", shortcut: "/ppp.png", apple: "/ppp.png" },
+  icons: {
+    icon: [{ url: "/favicon-32.png", sizes: "32x32", type: "image/png" }],
+    shortcut: "/favicon-32.png",
+    apple: "/apple-touch-icon.png",
+  },
   openGraph: {
     type: "website",
     locale: "ko_KR",
