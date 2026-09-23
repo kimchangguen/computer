@@ -225,6 +225,22 @@
 .primary:hover { background: #0c55c2; }
 .secondary:hover { background: #f1f7ff; }
 
+.actions .heroPhone {
+  min-width: 300px;
+  gap: 12px;
+  padding: 14px 30px;
+  font-size: 15px;
+}
+
+.actions .heroPhone svg { width: 22px; height: 22px; }
+
+.heroPhoneNumber {
+  margin-left: 4px;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -.01em;
+}
+
 .hero a:focus-visible,
 .hero button:focus-visible,
 .hero input:focus-visible { outline: 3px solid #1467df; outline-offset: 4px; }
@@ -301,6 +317,8 @@
   .cloud { top: 35px; right: 9%; width: 42px; height: 42px; border-radius: 15px; }
   .card svg { width: 24px; height: 24px; }
   .orbits { opacity: .5; }
+  .actions .heroPhone { max-width: none; width: 100%; white-space: normal; font-size: 13px; padding: 13px 16px; }
+  .heroPhoneNumber { font-size: 17px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

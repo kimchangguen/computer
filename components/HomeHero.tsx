@@ -46,8 +46,10 @@ export function HomeHero() {
           {["전원불량", "화면안나옴", "부팅불량", "SSD", "데이터복구", "노트북발열"].map(x => <Link key={x} href={`/ff?q=${x}`}>{x}</Link>)}
         </div>
         <div className={styles.actions}>
-          <Link className={styles.primary} href="/ff">수리정보 보기 <span aria-hidden="true">→</span></Link>
-          <Link className={styles.secondary} href="/ee">출장수리 안내 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M20 10c0 6-8 11-8 11S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg></Link>
+          <a className={`${styles.primary} ${styles.heroPhone}`} href="tel:15449669">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M6.6 10.8c1.4 2.8 3.8 5.2 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C11.4 21 3 12.6 3 2.3c0-.6.4-1 1-1h3.4c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.4 0 .8-.2 1L6.6 10.8Z"/></svg>
+            대표번호 <strong className={styles.heroPhoneNumber}>1544-9669</strong>
+          </a>
         </div>
       </div>
     </section>
