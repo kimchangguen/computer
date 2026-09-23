@@ -127,9 +127,14 @@ export default async function BlogPost({ params }: Props) {
   // whole route out of ISR full-page caching, which is the main win for
   // near-instant repeat visits. getRelatedPosts/getAdjacentPosts are
   // themselves cached via WORDPRESS_REVALIDATE_SECONDS, so this stays cheap
-  // once warm.
-  const related = await getRelatedPosts(post, 4).catch(() => []);
-  const adjacent = await getAdjacentPosts(post).catch(() => ({ older: null, newer: null }));
+  // once warm. They depend only on `post`, not on each other, so they run
+  // in parallel — halving this page's sequential WordPress round-trips
+  // keeps it well under Next's 60s static-generation timeout even if one
+  // of the underlying requests needs its retry.
+  const [related, adjacent] = await Promise.all([
+    getRelatedPosts(post, 4).catch(() => []),
+    getAdjacentPosts(post).catch(() => ({ older: null, newer: null })),
+  ]);
   const showFeaturedImage = post.featuredImage && !post.content.includes(post.featuredImage);
   const readingMinutes = estimateReadingMinutes(post.content);
   const toc = buildToc(post.content);

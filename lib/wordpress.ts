@@ -43,13 +43,30 @@ function getWordPressUrl() {
   return value.replace(/\/$/, "");
 }
 
-const REQUEST_TIMEOUT_MS = 10_000;
+// Measured directly against the real WordPress origin (Cloudways) while
+// diagnosing a Vercel build failure: most requests answer in 0.5-1.5s, but
+// it has periodic multi-request windows — seen consistently, both with
+// concurrent requests and with a plain one-at-a-time sequential loop, so
+// this isn't purely a concurrency artifact — where responses slow to
+// 2-6s for several requests in a row before recovering. It also only
+// comfortably serves ~6 concurrent requests before queuing pushes latency
+// well past 10s (see next.config.ts's `experimental.cpus`, which caps how
+// much concurrent load the build ever sends it). 20s gives real margin
+// above the observed 2-6s slow windows instead of sitting right next to
+// them; it does not chase away a genuinely dead origin, since that still
+// fails after MAX_ATTEMPTS.
+const REQUEST_TIMEOUT_MS = 20_000;
 // getPostBySlug() intentionally lets a real WordPress failure throw instead
 // of masquerading as notFound() (see BlogPost below), so a single transient
 // blip on the WordPress origin — a momentary 502/503, a dropped connection —
 // used to surface straight to the visitor (and to Googlebot) as a full-page
 // 500. One retry absorbs that without hiding a genuinely dead origin: it
-// still throws, just after two tries instead of one.
+// still throws, just after two tries instead of one. More attempts were
+// tried while diagnosing this and made things worse: they stack with
+// Next's own per-page static-generation timeout (see next.config.ts's
+// `staticPageGenerationTimeout`) across this file's several WordPress
+// calls per blog page, so a page can hit Next's ceiling before our own
+// retries even finish.
 const MAX_ATTEMPTS = 2;
 const RETRY_DELAY_MS = 300;
 
