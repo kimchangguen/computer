@@ -7,6 +7,7 @@ import { CategoryCTA } from "@/components/CategoryCTA";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { categories, type Post } from "@/data/posts";
 import { getAdjacentPosts, getPostBySlug, getPosts, getRelatedPosts } from "@/lib/wordpress";
+import { stripLeadingFeaturedImage } from "@/lib/post-content";
 import { SITE_IMAGE, SITE_NAME, absoluteUrl, breadcrumbJsonLd, jsonLd, truncate } from "@/lib/seo";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -135,9 +136,12 @@ export default async function BlogPost({ params }: Props) {
     getRelatedPosts(post, 4).catch(() => []),
     getAdjacentPosts(post).catch(() => ({ older: null, newer: null })),
   ]);
-  const showFeaturedImage = post.featuredImage && !post.content.includes(post.featuredImage);
-  const readingMinutes = estimateReadingMinutes(post.content);
-  const toc = buildToc(post.content);
+  // A WordPress featured image always wins over the category placeholder; a
+  // duplicate copy at the very top of the body is dropped instead.
+  const showFeaturedImage = Boolean(post.featuredImage);
+  const bodyHtml = stripLeadingFeaturedImage(post.content, post.featuredImage);
+  const readingMinutes = estimateReadingMinutes(bodyHtml);
+  const toc = buildToc(bodyHtml);
   const pageUrl = absoluteUrl(`/blog/${post.slug}`);
   const pageJsonLd = [
     blogPostingJsonLd(post),
