@@ -6,7 +6,7 @@ import { PostGrid } from "@/components/PostCard";
 import { CategoryCTA } from "@/components/CategoryCTA";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { categories, type Post } from "@/data/posts";
-import { getAdjacentPosts, getPostBySlug, getPosts, getRelatedPosts } from "@/lib/wordpress";
+import { getAdjacentPosts, getPostBySlug, getRelatedPosts } from "@/lib/wordpress";
 import { stripLeadingFeaturedImage } from "@/lib/post-content";
 import { SITE_IMAGE, SITE_NAME, absoluteUrl, breadcrumbJsonLd, jsonLd, truncate } from "@/lib/seo";
 
@@ -53,27 +53,17 @@ function buildToc(html: string): { html: string; items: TocItem[] } {
 // disabled this cache entirely, forcing a full WordPress round-trip per visit.
 export const revalidate = 120;
 
-// Without this, Next.js treats /blog/[slug] as fully dynamic (no route
-// caching at all, matching the [category] page's own generateStaticParams
-// pattern) since it has no way to know which slugs exist ahead of time.
-// dynamicParams stays true (default), so a brand new post not yet in this
-// list still renders on its first visit and gets cached from then on.
-//
-// WordPress returns non-Latin slugs already percent-encoded (e.g. Korean
-// titles come back as "%ec%83%88-..."). generateStaticParams expects the
-// decoded segment value and encodes it itself when building the route, so
-// passing the already-encoded slug through as-is double-encodes it — Next
-// then bakes a static page for the wrong path, and every real visit (which
-// requests the correctly single-encoded URL) falls through to a 404.
-export async function generateStaticParams() {
-  const { posts } = await getPosts({ perPage: 100 }).catch(() => ({ posts: [] }));
-  return posts.map((post) => {
-    try {
-      return { slug: decodeURIComponent(post.slug) };
-    } catch {
-      return { slug: post.slug };
-    }
-  });
+// Returning an empty list (rather than omitting generateStaticParams) keeps
+// /blog/[slug] on ISR: each post is rendered on its first visit and cached
+// for `revalidate` seconds, and brand new posts work the same way
+// (dynamicParams stays true). Nothing is prerendered at build time on
+// purpose: with ~30+ posts × 4 WordPress requests each, the Vercel build
+// kept timing out against the Cloudways origin (TimeoutError prerendering a
+// single post) and failed the whole production deploy, even though the same
+// requests are fast from elsewhere. A slow WordPress on first visit now
+// affects one page view instead of blocking every deploy.
+export async function generateStaticParams(): Promise<{ slug: string }[]> {
+  return [];
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
